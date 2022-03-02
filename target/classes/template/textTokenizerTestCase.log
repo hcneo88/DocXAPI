@@ -1,0 +1,33 @@
+==============
+{fieldname}
+ is going to rain.
+==============
+He is going to 
+{location}
+Size=2
+==============
+He wakes up at 
+{time}
+ this morning.
+==============
+{name}
+ is coming here at 
+{time}
+ tommmorrow morning.
+==============
+{name}
+ said he is waiting for us at 
+{time}
+ on 
+{day}
+==============
+{name}
+ said he is waiting.  I told 
+{name}
+ to wait at 
+{location}
+ instead.
+==============
+{photo}
+Size=1
+==============
