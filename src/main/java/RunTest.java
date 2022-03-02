@@ -10,6 +10,7 @@ import java.util.Map;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.docx4j.openpackaging.parts.DrawingML.Drawing;
+import org.docx4j.wml.HdrFtrRef;
 import org.docx4j.wml.JcEnumeration;
 import org.docx4j.wml.P;
 import org.docx4j.wml.Text;
@@ -67,7 +68,7 @@ public class RunTest {
 
     }
 
-    static DocXAPI wordAPI = new DocXAPI(); 
+    static DocXAPI wordAPI = null ; 
     static PrintStream originalOut    = System.out;
     
     static String templatePath ;
@@ -77,6 +78,7 @@ public class RunTest {
 
     public static void setUpTest(String testResultLogFile, boolean deleteFolder) throws Exception {
 
+        wordAPI = new DocXAPI();
         templatePath = RunTest.class.getResource("/template").toURI().getPath(); 
         expectedPath = RunTest.class.getResource("/test/expected").toURI().getPath() ;
         resultPath   = RunTest.class.getResource("/test/result").toURI().getPath() ;
@@ -90,7 +92,7 @@ public class RunTest {
         } 
 
         PrintStream ps = new PrintStream(resultPath + "/" + testResultLogFile) ; 
-        System.setOut(ps);
+        System.setOut(ps); 
         stopWatch = new StopWatch();
         stopWatch.start() ;
         
@@ -98,7 +100,7 @@ public class RunTest {
     
     public static void generateResult(String testId, String file2Compare ) throws Exception {
 
-        stopWatch.stop();
+        if (! stopWatch.isStopped()) stopWatch.stop();
         System.setOut(originalOut);
         Boolean passFail = true ;
             
@@ -223,7 +225,7 @@ public static void simpleParagraphTestCase(String templateFilename) throws Excep
    
     
     wordAPI.loadTemplate(templatePath + "/" + templateFilename);
-    byte[] imageByte = wordAPI.loadImage("d:/data/work/java/DocXAPI/ncs-logo.png") ;
+    byte[] imageByte = wordAPI.loadImage(templatePath + "/images/merlion.jpg") ;
     wordAPI.createSimpleParagraph("LEFT", wordAPI.getTemplateMainDocumentPart(), JcEnumeration.LEFT);
     wordAPI.createSimpleParagraph("MIDDLE", wordAPI.getTemplateMainDocumentPart(), JcEnumeration.CENTER);
     wordAPI.createSimpleParagraph("RIGHT", wordAPI.getTemplateMainDocumentPart(), JcEnumeration.RIGHT);
@@ -297,24 +299,114 @@ public static void useLetterHeadTestCase(String templateFilename,  String letter
         wordAPI.mailMerge();
         wordAPI.saveDoc(resultPath + "/" + templateFilename); 
         wordAPI.saveAsPDF(resultPath + "/" + templateFilename,  null);
-}
+    }
+
+    public static void createStdHeaderFooterTestCase(String templateFilename) throws Exception {
+
+        wordAPI.loadTemplate(templatePath + "/" + templateFilename) ;
+        byte[] imageByte = wordAPI.loadImage(templatePath + "/images/stars.jpg") ;
+        
+        List<List<Object>> headerList = new ArrayList<List<Object>>() ;
+        headerList.add(wordAPI.createParagraphList(imageByte, "Feature 1(a) - Standard Header")) ;
+        headerList.add(wordAPI.createParagraphList("Header Line 2",null)) ;
+        headerList.add(wordAPI.createParagraphList(null, "Header Line 3")) ;
+        wordAPI.setHeaderFooter("HEADER", HdrFtrRef.FIRST, headerList);
+
+        imageByte = wordAPI.loadImage(templatePath + "/images/go.png") ;
+        List<List<Object>> footerList = new ArrayList<List<Object>>() ;
+        footerList.add(wordAPI.createParagraphList("Feature 1(b) - Standard footer", imageByte));
+        footerList.add(wordAPI.createParagraphList(null, "Footer Line 2"));
+        footerList.add(wordAPI.createParagraphList("Footer Line 3", Constant.PAGENUM));
+        wordAPI.setHeaderFooter("FOOTER", HdrFtrRef.DEFAULT, footerList);
+
+        String jsonFilename = templateFilename.replace("docx", "json");
+        wordAPI.serializeHeaderFooter(resultPath + "/" + jsonFilename); 
+        wordAPI.mailMerge();
+        
+        wordAPI.saveDoc(resultPath + "/" + templateFilename) ;
+    }
+
+    public static void mergeWithTablesTestCase(String templateFilename) throws Exception {
+
+        wordAPI.loadTemplate(templatePath + "/" + templateFilename) ;
+                
+        for (int i=0;i<200;i++) {
+            Map<String, String> entry = new HashMap<>();
+
+            entry.put("no", Integer.toString(i));
+            entry.put("item", "Item " + Integer.toString(i));
+            entry.put("quantity", "10");
+
+            wordAPI.setTableMergeFields("table1", entry) ;
+        }
+        
+        String longText = "Lorem Ipsum is simply dummy text of the printing and typesetting industry."
+                + " Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when"
+                + " an unknown printer took a galley of type and scrambled it to make a type specimen"
+                + " book. It has survived not only five centuries, but also the leap into electronic" 
+                + "typesetting, remaining essentially unchanged." ;
+        Map<String, TextField> mappings = new HashMap<>();        
+        mappings.put("feature",   wordAPI.createTextField("Feature 4 - merging of simple String fields"));
+        mappings.put("name",      wordAPI.createTextField("Zion Tan").italics().encrypt(true));
+        mappings.put("address",   wordAPI.createTextField("10 Windsor Park, Singapore 129143").underline());
+        mappings.put("reference", wordAPI.createTextField("12345").highlightGreen());        
+        mappings.put("total",     wordAPI.createTextField("9234").red());
+        mappings.put("longtext",  wordAPI.createTextField(longText));
+        wordAPI.setTextMergeFields(mappings) ; 
+        //End Feature 4 - Merging of string fields.
+
+        //Feature 5 - Merging of image fields.
+        Map<String, ImageField> images = new HashMap<>();
+        byte[] imageByte = wordAPI.loadImage(templatePath + "/images/eagle.jpg");
+        images.put("image", wordAPI.createImageField(imageByte).setSize(3)) ;
+      
+        //Create QR code
+        imageByte = wordAPI.createQRCode("Peace, No War!", 50, 50);
+        images.put("photo", wordAPI.createImageField(imageByte).setSize(0)) ;
+        wordAPI.setImageMergeFields(images) ;
+        //Feature 5 - Merging of image fields.
+        
+        wordAPI.mailMerge();
+        wordAPI.saveDoc(resultPath + "/" + templateFilename) ;
+
+    }
+
+    public static void serializationTestCase(String templateFilename) throws Exception {
+
+        mergeWithTablesTestCase(templateFilename);
+        String jsonHF = templateFilename.replace(".docx", "_headerfooter.json") ;
+        String jsonMF = templateFilename.replace(".docx", "_mergefields.json") ;
+        wordAPI.serializeHeaderFooter(resultPath + "/" + jsonHF);
+        wordAPI.serializeMergeFields(resultPath + "/" + jsonMF);
+
+    } ;
 
     public static void main(String[] args) throws Exception {
 
-        /*
-        setUpTest("textTokenizerTestCase.log", true) ;
+        setUpTest("textTokenizerTestCase.log", true) ; //<= first time setup,  must always be true
         textTokenizerTestCase(null) ;
         generateResult("id-textTokenizer","textTokenizerTestCase.log") ;
 
         setUpTest("simpleParagraphTestCase.log",false) ;
-        simpleParagraphTestCase("testTemplate.docx");
-        generateResult("id-simpleParagraph","simpleParagraphTestCase.log") ;
-    */
+        simpleParagraphTestCase("zeroFieldTemplate.docx");
+        generateResult("id-simpleParagraph","zeroFieldTemplate.docx") ;
     
+        setUpTest("createStdHeaderFooterTestCase.log", false) ;
+        createStdHeaderFooterTestCase("stdHeaderFooterTemplate.docx"); 
+        generateResult("id-createStdHeadrFooterTestCase","stdHeaderFooterTemplate.json");
+
         setUpTest("useLetterHeadTestCase.log", false) ;
         useLetterHeadTestCase("emptyTemplate.docx", "LetterHead.docx");
         generateResult("id-useLetterHeaderTestCase","emptyTemplate.docx");
-        
+     
+        setUpTest("mergeWithTableTestCase.log", false) ;
+        mergeWithTablesTestCase("tableTemplate.docx"); 
+        generateResult("id-mergeWithTableTestCase","tableTemplate.docx");
+
+        setUpTest("serializationTestCase.log", false) ;
+        mergeWithTablesTestCase("tableTemplate.docx"); 
+        generateResult("id-serializationTestCase","tableTemplate_headerfooter.json");
+        generateResult("id-serializationTestCase","tableTemplate_mergefields.json");
 
     }
 

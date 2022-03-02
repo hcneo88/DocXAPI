@@ -24,17 +24,12 @@ import org.docx4j.finders.SectPrFinder;
 import org.docx4j.jaxb.Context;
 import org.docx4j.model.datastorage.XPathEnhancerParser.qName_return;
 import org.docx4j.model.fields.FieldUpdater;
-//import org.docx4j.model.datastorage.migration.VariablePrepare;
 import org.docx4j.model.structure.HeaderFooterPolicy;
 import org.docx4j.model.structure.PageDimensions;
 import org.docx4j.model.structure.SectionWrapper;
 import org.docx4j.model.table.TblFactory;
 import org.docx4j.dml.wordprocessingDrawing.Inline;
-
-
-
 import org.docx4j.openpackaging.packages.ProtectDocument;
-
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.Part;
 import org.docx4j.openpackaging.parts.PartName;
@@ -52,6 +47,8 @@ import org.docx4j.openpackaging.parts.relationships.RelationshipsPart.AddPartBeh
 import org.docx4j.wml.*;
 import org.docx4j.wml.PPrBase.Spacing;
 import org.docx4j.wml.SectPr.PgMar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
@@ -94,30 +91,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class DocXAPI { 
-
-   // static final int LEFT_ALIGN  = 0 ;
-   // static final int RIGHT_ALIGN = 1 ;  // Use JCEnumeration
-   // static final int TAB_ALIGN = 2 ;
-
- /*   private int   PARAGRAPH_ALIGNMENT_OPTION   = 2  ;           
-    private double RIGHT_TAB_POSITION     =  12.2 ; //cm from left when PARAGRAPH_ALIGNMENT_OPTION = 2
-*/
-    private Random ranNumber = new Random();
-
-    /*public static class Constant {
-               
-        static final String IMG_PROP_SIZE = "cmSize" ;
-        static final URL resource = DocXAPI.class.getResource(".\test\testTemplate.docx");  
-        
-        static final String FLD_OPEN_DELIMITER  = "{" ;
-        static final String FLD_CLOSE_DELIMITER = "}" ;
-
-        Constant() {}
-        
-    } */
-
-       
-     
+    
     class HeaderFooter {
         //NOTE: If this class is changed, need to analyze the impact on the method
         //deserializeHeaderFooter.  
@@ -164,7 +138,6 @@ public class DocXAPI {
         MergeFields() {
            
         } 
-
         
         public void setField(String fieldName, TextField fieldValue) {
             textVariables.put(Constant.FLD_OPEN_DELIMITER + fieldName + Constant.FLD_CLOSE_DELIMITER , fieldValue) ;
@@ -194,14 +167,17 @@ public class DocXAPI {
         }
         
     }
+
+    private static Logger log = LoggerFactory.getLogger(DocXAPI.class);
     
+        
     private WordprocessingMLPackage templatePackage ; 
     private MainDocumentPart templateMainDocumentPart ;   
     private ObjectFactory objectFactory ;
    
-    MergeFields mergeField ;
+    MergeFields mergeField = new MergeFields();
     Map<String, HeaderFooter> headerFooters = new HashMap<>();       
-    
+        
     public MainDocumentPart getTemplateMainDocumentPart() {
         return templateMainDocumentPart;
     }
@@ -212,7 +188,7 @@ public class DocXAPI {
         templatePackage = WordprocessingMLPackage.load(new File(templateFileName));
         templateMainDocumentPart = templatePackage.getMainDocumentPart();
         changeGlobalFont("Arial");        
-        log.info ("Template:", templateFileName, " loaded.");
+        log.info ("Loaded Template: {} {}", templateFileName,  " loaded.");
     } 
    
     public byte[] loadImage(String imagePath) throws Exception{
@@ -221,11 +197,14 @@ public class DocXAPI {
         return bytes;
     }
 
-    public Boolean hasNoMergeField() {
+    public Boolean nothingToMerge() {
+
+        if (mergeField == null) return true ;
             
         return (mergeField.textVariables.size() == 0 && 
                 mergeField.imageVariables.size() == 0 && 
-                mergeField.tables.size() == 0) ;
+                mergeField.tables.size() == 0 && 
+                headerFooters.size()==0) ;
     }
 
     public void setHeaderFooter(String type, HdrFtrRef hdrFtrRef,       //type: "HEADER", "FOOTER"
@@ -320,12 +299,13 @@ public class DocXAPI {
         return mergeString ; 
     } 
 
-    public void serializeMergeFields (String filePath) throws Exception  {
+    public String serializeMergeFields (String filePath) throws Exception  {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         Writer jsonWriter =  new FileWriter(filePath) ;
         gson.toJson(mergeField, jsonWriter) ;
         jsonWriter.flush();
-        jsonWriter.close();         
+        jsonWriter.close();
+        return gson.toJson(mergeField);          
     } 
 
     public void deserializeMergeFields(String json) {
@@ -343,12 +323,13 @@ public class DocXAPI {
               
     } 
 
-    public void serializeHeaderFooter (String filePath) throws Exception  {
+    public String serializeHeaderFooter (String filePath) throws Exception  {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         Writer jsonWriter =  new FileWriter(filePath) ;
         gson.toJson(headerFooters, jsonWriter) ; 
         jsonWriter.flush();
         jsonWriter.close();
+        return gson.toJson(headerFooters) ;
     } 
 
 
@@ -1563,27 +1544,32 @@ public class DocXAPI {
 
     public void mailMerge() throws Exception {
 
-       
-               //-------------- Implementation logic 
-
+        //-------------- Implementation logic 
+        
         //Define the header & footer
-        for (Map.Entry<String, HeaderFooter> hdr : headerFooters.entrySet()) { 
-            HeaderFooter hf = hdr.getValue() ;  
-            if (hdr.getKey().contains("HEADER")) {
-                createHeaderObject(hf.getParagraphs(), hf.getHdrFtrRef());
-                //createStdHeader(hf.getParagraphs(), hf.getHdrFtrRef(), hf.getJustification());
-            }   
-            
-            if (hdr.getKey().contains("FOOTER")) {
-                createFooterObject(hf.getParagraphs(), hf.getHdrFtrRef());
-                //createStdFooter(hf.getParagraphs(), hf.getHdrFtrRef(), hf.getJustification());
-            }  
-            
+        if (Boolean.TRUE.equals(nothingToMerge())) {
+            return ;
+        }
+        System.out.println("HeaderFooter:" + headerFooters.size());
+        if (headerFooters.size() > 0 ) {
+            for (Map.Entry<String, HeaderFooter> hdr : headerFooters.entrySet()) { 
+                System.out.println("1");
+                HeaderFooter hf = hdr.getValue() ;  
+                if (hdr.getKey().contains("HEADER")) {
+                    createHeaderObject(hf.getParagraphs(), hf.getHdrFtrRef());
+                    //createStdHeader(hf.getParagraphs(), hf.getHdrFtrRef(), hf.getJustification());
+                }   
+                
+                if (hdr.getKey().contains("FOOTER")) {
+                    createFooterObject(hf.getParagraphs(), hf.getHdrFtrRef());
+                    //createStdFooter(hf.getParagraphs(), hf.getHdrFtrRef(), hf.getJustification());
+                }  
+                
+            }
         } 
 
         //Table Merge field                       
         if (mergeField.tables.size() > 0) { 
-            
             String[] colNames = null ; 
             for (Map.Entry<String, List<Map<String, String>>> tableList :mergeField.tables.entrySet()) {
                 
@@ -1722,127 +1708,7 @@ public class DocXAPI {
     }
 
     public static void main(String[] args) throws Exception {
-
         
-        DocXAPI ofc = new DocXAPI() ;
-
-        ofc.loadTemplate("D:/data/work/java/DocXAPI/tableTemplate.docx") ;
-        byte[] imageByte = ofc.loadImage("d:/data/work/java/DocXAPI/ncs-logo.png") ;
-
-        //Feature 1 : Insert Standard Header and Footer
-    
-        List<List<Object>> headerList = new ArrayList<List<Object>>() ;
-        headerList.add(ofc.createParagraphList(imageByte, "Feature 1(a) - Standard Header")) ;
-        headerList.add(ofc.createParagraphList("Header Line 2",null)) ;
-        headerList.add(ofc.createParagraphList(null, "Header Line 3")) ;
-        
-        ofc.setHeaderFooter("HEADER", HdrFtrRef.FIRST, headerList);
-        
-        List<List<Object>> footerList = new ArrayList<List<Object>>() ;
-        footerList.add(ofc.createParagraphList("Feature 1(b) - Standard footer", imageByte));
-        footerList.add(ofc.createParagraphList("Footer Line 2", Constant.PAGENUM));
-        footerList.add(ofc.createParagraphList(null, "Footer Line 3"));
-        ofc.setHeaderFooter("FOOTER", HdrFtrRef.DEFAULT, footerList);
-       
-        //End Feature 1 : Insert Standard Header and Footer
-
-        //Demo of Feature 2 - insert simple paragraph
-        //ofc.SimpleParagraphTestCase();
-        //End of Feature 2
-
-        //Feature 3 : Populate merge table
-        
-        for (int i=0;i<200;i++) {
-            Map<String, String> entry = new HashMap<>();
-
-            entry.put("no", Integer.toString(i));
-            entry.put("item", "Item " + Integer.toString(i));
-            entry.put("quantity", "10");
-
-            ofc.setTableMergeFields("table1", entry) ;
-        }
-/*        entry = new HashMap<>();
-        entry.put("no", "2");
-        entry.put("item", "milk");
-        entry.put("quantity", "6");
-        
-        ofc.setTableMergeFields("table1", entry) ;
-  */
-        //Feature 3 : Populate merge table
-
-        //Feature 4 - Merging of string fields.
-        String longText = "Lorem Ipsum is simply dummy text of the printing and typesetting industry."
-                + " Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when"
-                + " an unknown printer took a galley of type and scrambled it to make a type specimen"
-                + " book. It has survived not only five centuries, but also the leap into electronic" 
-                + "typesetting, remaining essentially unchanged." ;
-        Map<String, TextField> mappings = new HashMap<>();        
-        mappings.put("feature",   ofc.createTextField("Feature 4 - merging of simple String fields"));
-        mappings.put("name",      ofc.createTextField("Zion Tan").italics().encrypt(true));
-        mappings.put("address",   ofc.createTextField("10 Windsor Park, Singapore 129143").underline());
-        mappings.put("reference", ofc.createTextField("12345").highlightGreen());        
-        mappings.put("total",     ofc.createTextField("9234").red());
-        mappings.put("longtext",  ofc.createTextField(longText));
-
-        ofc.setTextMergeFields(mappings) ; 
-        //End Feature 4 - Merging of string fields.
-
-        //Feature 5 - Merging of image fields.
-        Map<String, ImageField> images = new HashMap<>();
-        imageByte = ofc.loadImage("d:/data/work/java/DocXAPI/coffee.jpg");
-        images.put("image", ofc.createImageField(imageByte).setSize(3)) ;
-      
-        //Create QR code
-        imageByte = ofc.createQRCode("AFC Woman Football", 50, 50);
-        images.put("photo", ofc.createImageField(imageByte).setSize(0)) ;
-        ofc.setImageMergeFields(images) ;
-        //Feature 5 - Merging of image fields.
-
-        String json = ofc.serializeMergeFields() ;
-        String jsonHF = ofc.serializeHeaderFooter();
-        ofc.serializeHeaderFooter("d:/data/temp/headerfooter.json");
-        ofc.deserializeMergeFields(json);
-        ofc.deserializeHeaderFooters(jsonHF);
-
-        ofc.mailMerge() ;
-        
-        ofc.serializeHeaderFooter("d:/data/temp/headerfooter.json");
-        ofc.serializeMergeFields("d:/data/temp/mergefields.json");
-      
-
-        //Not Working.  Cannot get the paragraph index correctly
-        //Feature 7 - Inserting paragraph
-/*        P paragraph  = ofc.objectFactory.createP() ;
-        R run = ofc.createRun();
-        Text txt = ofc.createText("this is a newly created paragrap") ; 
-        run.getContent().add(txt) ;
-        paragraph.getContent().add(run) ;
-        ofc.insertParagraph("reference", paragraph);   
-*/  
-        //End Feature 7 - Inserting paragraph
-
-        ofc.saveDoc("D:/data/work/Java/DocXAPI/result-1234.docx");
-        ofc.saveAsPDF("D:/data/work/Java/DocXAPI/result-1234.docx", null) ;
-        
-        StopWatch stopWatch = new StopWatch();
-        stopWatch.start() ;
-        ofc.protectPDF("D:\\data\\work\\Java\\DocXAPI\\result-1234.pdf",
-                       "D:\\data\\work\\Java\\DocXAPI\\result-1234-ENCRYPTED.pdf", 
-                       "ownerPwd", "userPwd");
-        stopWatch.stop();
-        System.out.println("Elapsed Time in milli seconds (Encrypted PDF via file input): "+ stopWatch.getTime()); 
-
-        //13 seconds
-    /*    start = System.currentTimeMillis();
-        ByteArrayOutputStream bos = ofc.saveAsPDF("D:\\data\\work\\Java\\DocXAPI\\result-1234.docx");
-        ofc.protectPDF(bos.toByteArray(),"D:\\data\\work\\Java\\DocXAPI\\result-1234-ENCRYPTED.pdf", 
-                      "ownerPwd", "userPwd");
-        end = System.currentTimeMillis();  
-        System.out.println("Elapsed Time in milli seconds (ByteStream): "+ (end-start));
-    */
-        
-        
-        //    ofc.protectPDF("D:\\data\\work\\Java\\DocXAPI\\result-1234.pdf", "D:\\data\\work\\Java\\DocXAPI\\result-1234-enc.pdf", "test1234", "test5678");
     }
 
 }
