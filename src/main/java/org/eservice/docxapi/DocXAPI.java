@@ -322,10 +322,10 @@ public class DocXAPI {
         Map<String, String>  address = recipientAddress.format() ;
         
         mergeField.setField("notice_id", createTextField(recipientAddress.getNoticeId())) ;
-        mergeField.setField("name", createTextField(address.get("Name")));
-        mergeField.setField("address_line1", createTextField(address.get("Line1"))) ;
-        mergeField.setField("address_line2", createTextField(address.get("Line2"))) ;
-        mergeField.setField("address_line3", createTextField(address.get("Line3"))) ;
+        mergeField.setField("name", createTextField(address.get("name")));
+        mergeField.setField("address_line1", createTextField(address.get("addr_line1"))) ;
+        mergeField.setField("address_line2", createTextField(address.get("addr_line2"))) ;
+        mergeField.setField("address_line3", createTextField(address.get("addr_line3"))) ;
 
 
     }
