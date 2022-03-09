@@ -1506,14 +1506,14 @@ public class DocXAPI {
                             
                         }
                     }
-                    System.out.print("Section:"  + hf + " | Reference Type:" + hfRef.value());
+                    log.info("Section:"  + hf + " | Reference Type:" + hfRef.value());
 
                     //The following lines of code is to look for image in the header/footer
                    // RelationshipsPart sourceRelationshipsPart = sourceHeaderFooterPart.getRelationshipsPart();
                     if (sourceRelationshipsPart != null) { 
                         List<Relationship> sourceRelationships = sourceRelationshipsPart.getRelationships().getRelationship();
                         for (Relationship r : sourceRelationships) {
-                            System.out.print(" | Part type:" + r.getType() + " | Extension:"); 
+                            //System.out.print(" | Part type:" + r.getType() + " | Extension:"); 
                             if (r.getType().contains("image")) {
                                 Part part = sourceRelationshipsPart.getPart(r);
                                 if (part != null) {
@@ -1522,22 +1522,22 @@ public class DocXAPI {
                                     //All IMAGE (PNG, JPEG or GIF are classified under BinaryPart.
                                     //Hence just need to load once using getBuffer
                                     if (part instanceof BinaryPart) {   //MUST BE the first check !
-                                        System.out.print("BIN->") ;
+                                        //System.out.print("BIN->") ;
                                         ((BinaryPart)part).getBuffer();
                                     }
                                     
                                     if (part instanceof ImagePngPart) {
-                                        System.out.print("PNG") ;
+                                        //System.out.print("PNG") ;
                                     //    ((ImagePngPart) part).getBytes() ;
                                     }
                     
                                     if (part instanceof ImageJpegPart) {
-                                        System.out.print("JPG") ;
+                                        //System.out.print("JPG") ;
                                         //((ImageJpegPart) part).getBytes() ;
                                     }
 
                                     if (part instanceof ImageGifPart) {
-                                        System.out.print("GIF") ;
+                                       // System.out.print("GIF") ;
                                         //((ImageGifPart) part).getBytes() ;
                                     }
                                     
@@ -1587,16 +1587,15 @@ public class DocXAPI {
         if (Boolean.TRUE.equals(nothingToMerge())) {
             return ;
         }
-        System.out.println("HeaderFooter:" + headerFooters.size());
+        
+        log.info("HeaderFooter: {}" , headerFooters.size());
         if (headerFooters.size() > 0 ) {
             for (Map.Entry<String, HeaderFooter> hdr : headerFooters.entrySet()) { 
-                System.out.println("1");
                 HeaderFooter hf = hdr.getValue() ;  
                 if (hdr.getKey().contains("HEADER")) {
                     createHeaderObject(hf.getParagraphs(), hf.getHdrFtrRef());
                     //createStdHeader(hf.getParagraphs(), hf.getHdrFtrRef(), hf.getJustification());
                 }   
-                
                 if (hdr.getKey().contains("FOOTER")) {
                     createFooterObject(hf.getParagraphs(), hf.getHdrFtrRef());
                     //createStdFooter(hf.getParagraphs(), hf.getHdrFtrRef(), hf.getJustification());
