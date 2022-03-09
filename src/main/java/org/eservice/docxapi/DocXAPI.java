@@ -149,7 +149,8 @@ public class DocXAPI {
             recipientAddress.setFloorNo("");
             recipientAddress.setStreetName("");
             recipientAddress.setPostalCd("");
-            recipientAddress.setNoticeId("");
+            recipientAddress.setTransactionId("");
+            recipientAddress.setTransactionDate("");
         } 
        
         public RecipientAddress gRecipientAddress() {
@@ -321,7 +322,8 @@ public class DocXAPI {
 
         Map<String, String>  address = recipientAddress.format() ;
         
-        mergeField.setField("notice_id", createTextField(recipientAddress.getNoticeId())) ;
+        mergeField.setField("transaction_id", createTextField(recipientAddress.getTransactionId())) ;
+        mergeField.setField("transaction_date", createTextField(recipientAddress.getTransactionDate())) ;
         mergeField.setField("name", createTextField(address.get("name")));
         mergeField.setField("address_line1", createTextField(address.get("addr_line1"))) ;
         mergeField.setField("address_line2", createTextField(address.get("addr_line2"))) ;
