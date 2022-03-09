@@ -1506,7 +1506,6 @@ public class DocXAPI {
                             
                         }
                     }
-                    log.info("Section:"  + hf + " | Reference Type:" + hfRef.value());
 
                     //The following lines of code is to look for image in the header/footer
                    // RelationshipsPart sourceRelationshipsPart = sourceHeaderFooterPart.getRelationshipsPart();
@@ -1588,7 +1587,6 @@ public class DocXAPI {
             return ;
         }
         
-        log.info("HeaderFooter: {}" , headerFooters.size());
         if (headerFooters.size() > 0 ) {
             for (Map.Entry<String, HeaderFooter> hdr : headerFooters.entrySet()) { 
                 HeaderFooter hf = hdr.getValue() ;  
