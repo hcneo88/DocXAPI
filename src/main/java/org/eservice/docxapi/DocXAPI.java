@@ -21,8 +21,8 @@ import org.docx4j.XmlUtils;
 import org.docx4j.finders.RangeFinder;
 import org.docx4j.finders.SectPrFinder;
 import org.docx4j.jaxb.Context;
-import org.docx4j.model.datastorage.XPathEnhancerParser.qName_return;
-import org.docx4j.model.fields.FieldUpdater;
+
+//import org.docx4j.model.fields.FieldUpdater;
 import org.docx4j.model.structure.HeaderFooterPolicy;
 import org.docx4j.model.structure.PageDimensions;
 import org.docx4j.model.structure.SectionWrapper;
@@ -79,7 +79,6 @@ import java.util.HashMap;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -129,10 +128,23 @@ public class DocXAPI {
 
     @Data
     class NoticeSummary {
-        String NoticeNumber ;
+        String noticeNumber ;
+        String noticeVersion ;
         String recipientName ;
         String transactionId ;
         String transactionDate ;
+
+        public NoticeSummary() {
+
+            noticeNumber = "" ;
+            noticeVersion = "" ;
+            recipientName = "" ;
+            transactionDate = "" ;
+            transactionId = "" ;
+
+        }
+            
+
     }
    
     class MergeFields {
@@ -150,10 +162,7 @@ public class DocXAPI {
             tables = new HashMap<>() ;
 
             noticeSummary = new NoticeSummary();
-            noticeSummary.NoticeNumber = "" ;
-            noticeSummary.recipientName = "" ;
-            noticeSummary.transactionDate = "" ;
-            noticeSummary.transactionId = "" ;
+            
         } 
        
         
@@ -333,6 +342,7 @@ public class DocXAPI {
         mergeField.setField("addressline3",  createTextField(address.get("addressline3"))) ;
 
         mergeField.noticeSummary.setNoticeNumber(recipientAddress.getNoticeNumber());
+        mergeField.noticeSummary.setNoticeVersion(recipientAddress.getNoticeVersion());
         mergeField.noticeSummary.setRecipientName(recipientAddress.getRecipientName());
         mergeField.noticeSummary.setTransactionId(recipientAddress.getTransactionId());
         mergeField.noticeSummary.setTransactionDate(recipientAddress.getTransactionDate());
