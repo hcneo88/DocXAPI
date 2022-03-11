@@ -208,7 +208,7 @@ public class DocXAPI {
     Map<String, HeaderFooter> headerFooters = new HashMap<>();       
     RecipientAddress recipientAddress  ;
 
-    DocXAPI() {
+    public DocXAPI() {
         recipientAddress = new RecipientAddress();
         
     }
