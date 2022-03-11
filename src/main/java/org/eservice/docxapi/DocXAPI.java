@@ -182,7 +182,8 @@ public class DocXAPI {
 
             Map<String, String> mergeFieldMap = new HashMap<>() ; 
             for (Map.Entry<String,String> field : rowFields.entrySet()) {
-                mergeFieldMap.put( Constant.FLD_OPEN_DELIMITER + field.getKey() + Constant.FLD_CLOSE_DELIMITER, field.getValue());
+                //mergeFieldMap.put( Constant.FLD_OPEN_DELIMITER + field.getKey() + Constant.FLD_CLOSE_DELIMITER, field.getValue());
+                mergeFieldMap.put(field.getKey(), field.getValue());  
             }
             
             tableList.add(mergeFieldMap) ;            
@@ -1358,16 +1359,26 @@ public class DocXAPI {
             
             List<Object> tables = getAllElementFromObject(mainDocumentPart, Tbl.class);       
             if (tables.size() == 0) {
-                //TODO: log info
+                log.error("Table not found in template.");
                 return ;
             } 
-            Tbl tempTable = getTemplateTable(tables, placeholders[0]);        
+            String placeHolder = Constant.FLD_OPEN_DELIMITER + placeholders[0] + Constant.FLD_CLOSE_DELIMITER ;
+            Tbl tempTable = getTemplateTable(tables, placeHolder );        
             List<Object> rows = getAllElementFromObject(tempTable, Tr.class);
+            
             
     //      if (rows.size() == 1) { //careful only tables with 1 row are considered here
                 Tr templateRow = (Tr) rows.get(rows.size()-1);
-                for (Map<String, String> replacements : textToAdd) {              
-                    addRowToTable(tempTable, templateRow, replacements);
+                for (Map<String, String> replacements : textToAdd) { 
+                    
+                    //Put back field delimiter { and }
+                    Map<String, String> replacementMap = new HashMap<>() ;
+                    for (Map.Entry<String, String> replacementText : replacements.entrySet()) {
+                        replacementMap.put(Constant.FLD_OPEN_DELIMITER + 
+                                           replacementText.getKey()    +
+                                           Constant.FLD_CLOSE_DELIMITER, replacementText.getValue());
+                    }
+                    addRowToTable(tempTable, templateRow, replacementMap);
                 }
                 assert tempTable != null;
                 tempTable.getContent().remove(templateRow);
@@ -1380,7 +1391,7 @@ public class DocXAPI {
         Tr workingRow = XmlUtils.deepCopy(templateRow);
         List<?> textElements = getAllElementFromObject(workingRow, Text.class);
         for (Object object : textElements) {
-            Text text = (Text) object;
+            Text text = (Text) object;            
             String replacementValue = replacements.get(text.getValue());
             if (replacementValue != null)
                 text.setValue(replacementValue);
@@ -1394,7 +1405,6 @@ public class DocXAPI {
             List<?> textElements = getAllElementFromObject(tbl, Text.class);            
             for (Object text : textElements) {
                 Text textElement = (Text) text;
-                
                 if (textElement.getValue() != null && textElement.getValue().equals(templateKey))
                     return (Tbl) tbl;
             }
