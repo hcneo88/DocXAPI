@@ -86,6 +86,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.internal.LinkedTreeMap;
 import com.google.gson.reflect.TypeToken;
 
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -125,11 +126,18 @@ public class DocXAPI {
         }
 
     }
+
+    @Data
+    class NoticeSummary {
+        String NoticeNumber ;
+        String recipientName ;
+        String transactionId ;
+        String transactionDate ;
+    }
    
     class MergeFields {
                            //an array element is a "paragraph" in the header/footer 
-
-        RecipientAddress recipientAddress  ;
+        NoticeSummary noticeSummary ;
         Map<String, TextField> textVariables ;              //1st String = name of merge field
         Map<String, ImageField> imageVariables  ;
         Map<String, List<Map<String, String>>> tables ;     //1st String = name of table
@@ -141,25 +149,13 @@ public class DocXAPI {
             imageVariables = new HashMap<>();
             tables = new HashMap<>() ;
 
-            recipientAddress = new RecipientAddress();
-            recipientAddress.setRecipientName("");
-            recipientAddress.setAddressType(' ');
-            recipientAddress.setBlkHseNo("");
-            recipientAddress.setBuildingName("");
-            recipientAddress.setFloorNo("");
-            recipientAddress.setStreetName("");
-            recipientAddress.setPostalCd("");
-            recipientAddress.setTransactionId("");
-            recipientAddress.setTransactionDate("");
+            noticeSummary = new NoticeSummary();
+            noticeSummary.NoticeNumber = "" ;
+            noticeSummary.recipientName = "" ;
+            noticeSummary.transactionDate = "" ;
+            noticeSummary.transactionId = "" ;
         } 
        
-        public RecipientAddress gRecipientAddress() {
-            return this.recipientAddress ;
-        }
-
-        public void setRecipientAddress(RecipientAddress recipientAddress) {
-            this.recipientAddress = recipientAddress ;
-        }
         
         public void setField(String fieldName, TextField fieldValue) {
 //            textVariables.put(Constant.FLD_OPEN_DELIMITER + fieldName + Constant.FLD_CLOSE_DELIMITER , fieldValue) ;
@@ -167,7 +163,7 @@ public class DocXAPI {
         }
 
         public void setField(String fieldName, ImageField imageField) {
-            String key = Constant.FLD_OPEN_DELIMITER + fieldName + Constant.FLD_CLOSE_DELIMITER ; 
+            //String key = Constant.FLD_OPEN_DELIMITER + fieldName + Constant.FLD_CLOSE_DELIMITER ; 
             imageVariables.put(fieldName, imageField) ;
         }
 
@@ -201,7 +197,13 @@ public class DocXAPI {
    
     MergeFields mergeField = new MergeFields();
     Map<String, HeaderFooter> headerFooters = new HashMap<>();       
+    RecipientAddress recipientAddress  ;
+
+    DocXAPI() {
+        recipientAddress = new RecipientAddress();
         
+    }
+
     public MainDocumentPart getTemplateMainDocumentPart() {
         return templateMainDocumentPart;
     }
@@ -316,11 +318,11 @@ public class DocXAPI {
     }
 
     public RecipientAddress getRecipient() {
-        return mergeField.gRecipientAddress() ;
+        return this.recipientAddress ;
     }
 
     public void setRecipient(RecipientAddress recipientAddress) {
-        mergeField.setRecipientAddress(recipientAddress); 
+        this.recipientAddress = recipientAddress; 
 
         Map<String, String>  address = recipientAddress.format() ;
         mergeField.setField("transactionid", createTextField(recipientAddress.getTransactionId())) ;
@@ -330,7 +332,11 @@ public class DocXAPI {
         mergeField.setField("addressline2",  createTextField(address.get("addressline2"))) ;
         mergeField.setField("addressline3",  createTextField(address.get("addressline3"))) ;
 
-
+        mergeField.noticeSummary.setNoticeNumber(recipientAddress.getNoticeNumber());
+        mergeField.noticeSummary.setRecipientName(recipientAddress.getRecipientName());
+        mergeField.noticeSummary.setTransactionId(recipientAddress.getTransactionId());
+        mergeField.noticeSummary.setTransactionDate(recipientAddress.getTransactionDate());
+        
     }
 
     public String serializeMergeFields ()  {
@@ -1393,7 +1399,8 @@ public class DocXAPI {
         List<?> textElements = getAllElementFromObject(workingRow, Text.class);
         for (Object object : textElements) {
             Text text = (Text) object;            
-            log.info("ADDTOROW {}", text.getValue()) ;
+            
+            log.debug("Extracted table field name from table in template:{}", text.getValue()) ;
             //Workaround !
             String txtValue = text.getValue();
             if (! txtValue.startsWith("{"))
@@ -1403,8 +1410,11 @@ public class DocXAPI {
             //END Workaround
             String replacementValue = replacements.get(txtValue);
             if (replacementValue != null) {
-                replacementValue = replacementValue.replace("{", "") ;
-                replacementValue = replacementValue.replace("}", "") ;
+                String replacedText = "" ;
+                for (int i=0;i<replacementValue.length();i++) {
+                    if (replacementValue.charAt(i) != '{' && replacementValue.charAt(i) != '}') 
+                       replacedText = replacedText.concat(String.valueOf(replacementValue.charAt(i))) ;
+                }
                 text.setValue(replacementValue);
             }
         }
