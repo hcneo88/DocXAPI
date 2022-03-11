@@ -162,7 +162,8 @@ public class DocXAPI {
         }
         
         public void setField(String fieldName, TextField fieldValue) {
-            textVariables.put(Constant.FLD_OPEN_DELIMITER + fieldName + Constant.FLD_CLOSE_DELIMITER , fieldValue) ;
+//            textVariables.put(Constant.FLD_OPEN_DELIMITER + fieldName + Constant.FLD_CLOSE_DELIMITER , fieldValue) ;
+            textVariables.put(fieldName , fieldValue) ;
         }
 
         public void setField(String fieldName, ImageField imageField) {
@@ -210,7 +211,7 @@ public class DocXAPI {
         templatePackage = WordprocessingMLPackage.load(new File(templateFileName));
         templateMainDocumentPart = templatePackage.getMainDocumentPart();
         changeGlobalFont("Arial");        
-        log.info ("Loaded Template: {} {}", templateFileName,  " loaded.");
+        log.debug ("Loaded Template: {} {}", templateFileName,  " loaded.");
     } 
    
     public byte[] loadImage(String imagePath) throws Exception{
@@ -321,13 +322,12 @@ public class DocXAPI {
         mergeField.setRecipientAddress(recipientAddress); 
 
         Map<String, String>  address = recipientAddress.format() ;
-        
-        mergeField.setField("transaction_id", createTextField(recipientAddress.getTransactionId())) ;
-        mergeField.setField("transaction_date", createTextField(recipientAddress.getTransactionDate())) ;
-        mergeField.setField("name", createTextField(address.get("name")));
-        mergeField.setField("address_line1", createTextField(address.get("addr_line1"))) ;
-        mergeField.setField("address_line2", createTextField(address.get("addr_line2"))) ;
-        mergeField.setField("address_line3", createTextField(address.get("addr_line3"))) ;
+        mergeField.setField("transactionid", createTextField(recipientAddress.getTransactionId())) ;
+        mergeField.setField("transactiondate", createTextField(recipientAddress.getTransactionDate())) ;
+        mergeField.setField("recipientname", createTextField(address.get("recipientname")));
+        mergeField.setField("addressline1",  createTextField(address.get("addressline1"))) ;
+        mergeField.setField("addressline2",  createTextField(address.get("addressline2"))) ;
+        mergeField.setField("addressline3",  createTextField(address.get("addressline3"))) ;
 
 
     }
@@ -1247,17 +1247,18 @@ public class DocXAPI {
                     runRPr = run.getRPr();
                 }  
                 
+                //log.info("Text {} - Tokenized paragraphs {}", text.getValue(), tokens) ;
                 for (String t : tokens) {
                     
                     //System.out.println("Field name=" + fieldName + " - "  + t) ;
 
                     //R newRun = objectFactory.createR() ;
                     R newRun = createRun() ;
-
                     Text newText = objectFactory.createText();
                     newText.setSpace("preserve") ;  
                     if (t.contains(fieldName)) {
                         //System.out.print ("2") ;
+                        
                         if (replacementObject instanceof TextField) {
                           //  System.out.print ("3") ;
                             TextField textField = (TextField) replacementObject ;
@@ -1272,10 +1273,9 @@ public class DocXAPI {
                             ImageField  imageField = (ImageField) replacementObject ;
                             newRun.getContent().add(
                                    createDrawing(imageField.getImage(), part, imageField.getSize())) ;
-
-
                         }
                     } else {
+                       
                         newText.setValue(t) ; 
                         newRun.setRPr(runRPr) ;
                         newRun.getContent().add(newText) ;
@@ -1303,7 +1303,8 @@ public class DocXAPI {
     
         List<Relationship> rS = rP.getRelationshipsByType(Namespaces.HEADER);
         for (Relationship relationship : rS) {
-            HeaderPart headerPart = (HeaderPart) rP.getPart(relationship.getId()) ;           
+            HeaderPart headerPart = (HeaderPart) rP.getPart(relationship.getId()) ;
+                  
             substituteField(headerPart, fieldName, obj) ;
         }
 
@@ -1586,6 +1587,7 @@ public class DocXAPI {
         
         //Define the header & footer
         if (Boolean.TRUE.equals(nothingToMerge())) {
+            log.debug("Nothing to mail merge.") ;
             return ;
         }
         
@@ -1606,6 +1608,7 @@ public class DocXAPI {
 
         //Table Merge field                       
         if (mergeField.tables.size() > 0) { 
+            log.debug("Merging tables.");
             String[] colNames = null ; 
             for (Map.Entry<String, List<Map<String, String>>> tableList :mergeField.tables.entrySet()) {
                 
@@ -1630,6 +1633,7 @@ public class DocXAPI {
         // Image Merge Field
         String fieldName;
         if (mergeField.imageVariables.size() > 0) {
+            log.debug("Merging images.");
             for (Map.Entry<String, ImageField> imageField : mergeField.imageVariables.entrySet()) {
                 fieldName = imageField.getKey() ;              
                 replaceField(fieldName, imageField.getValue());
@@ -1638,6 +1642,7 @@ public class DocXAPI {
 
         //Text Merge Fields
         if (mergeField.textVariables.size() > 0) {
+            log.debug("Merging text.");
             for (Map.Entry<String, TextField> textFields : mergeField.textVariables.entrySet()) {
                 fieldName = textFields.getKey() ;
                 if (textFields.getValue().isEncrypted() && textFields.getValue().getText().startsWith("!")) {
@@ -1655,7 +1660,8 @@ public class DocXAPI {
     
     } 
 
-    public List<String> textTokenizer(String text) {
+/*
+    public List<String> backupTextTokenizer(String text) {
 
         List<String> textToken = new ArrayList<>();
         String fieldName = "" ;
@@ -1680,6 +1686,48 @@ public class DocXAPI {
             }
 
             if (text.charAt(i) == '}') {
+                textToken.add(fieldName) ;
+                isFieldName = false ;
+                fieldName = "";
+                lastFieldIndex = i;  
+            }
+        }
+
+        if (lastFieldIndex < text.length() && textValue.length() > 0 ) {  //got residual text to add to array after for loop
+            textToken.add(textValue) ;
+        }
+
+        return textToken;
+
+    }
+*/
+
+    public List<String> textTokenizer(String text) {
+
+        List<String> textToken = new ArrayList<>();
+        String fieldName = "" ;
+        String textValue = "" ;
+
+        boolean isFieldName = false; 
+        int lastFieldIndex = 0 ;
+
+        for (int i=0;i<text.length();i++) {
+
+            String t = new StringBuilder().append(text.charAt(i)).toString() ;
+            if (text.charAt(i) == '{') isFieldName = true;
+            
+            if (isFieldName) {                 
+                fieldName = fieldName.concat(t) ;
+                if (textValue.length() > 0) {
+                    textToken.add(textValue) ;
+                    textValue = "";
+                }
+            } else {
+                if (text.charAt(i) != '{' && text.charAt(i) != '}') //<= double protection to get rid of { and }
+                    textValue = textValue.concat(t) ;
+            }
+                    
+            if (text.charAt(i) == '}') {                
                 textToken.add(fieldName) ;
                 isFieldName = false ;
                 fieldName = "";

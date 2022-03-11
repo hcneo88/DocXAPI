@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Launch RunTest",
+            "request": "launch",
+            "mainClass": "org.eservice.docxapi.RunTest",
+            "projectName": "DocXAPI"
+        },
+        {
+            "type": "java",
             "name": "Launch Current File",
             "request": "launch",
             "mainClass": "${file}"
