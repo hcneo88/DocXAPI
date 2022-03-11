@@ -168,7 +168,7 @@ public class DocXAPI {
 
         public void setField(String fieldName, ImageField imageField) {
             String key = Constant.FLD_OPEN_DELIMITER + fieldName + Constant.FLD_CLOSE_DELIMITER ; 
-            imageVariables.put(key, imageField) ;
+            imageVariables.put(fieldName, imageField) ;
         }
 
         public void setTableRowFields(String tableName, Map<String, String> rowFields ) {
@@ -1354,18 +1354,19 @@ public class DocXAPI {
     }
 
     public  void replaceTable(String[] placeholders, List<Map<String, String>> textToAdd, MainDocumentPart mainDocumentPart) throws Exception, JAXBException {
+
         
         if (placeholders[0] != null) {
-            
+
             List<Object> tables = getAllElementFromObject(mainDocumentPart, Tbl.class);       
             if (tables.size() == 0) {
                 log.error("Table not found in template.");
                 return ;
             } 
+        
             String placeHolder = Constant.FLD_OPEN_DELIMITER + placeholders[0] + Constant.FLD_CLOSE_DELIMITER ;
             Tbl tempTable = getTemplateTable(tables, placeHolder );        
             List<Object> rows = getAllElementFromObject(tempTable, Tr.class);
-            
             
     //      if (rows.size() == 1) { //careful only tables with 1 row are considered here
                 Tr templateRow = (Tr) rows.get(rows.size()-1);
@@ -1392,14 +1393,26 @@ public class DocXAPI {
         List<?> textElements = getAllElementFromObject(workingRow, Text.class);
         for (Object object : textElements) {
             Text text = (Text) object;            
-            String replacementValue = replacements.get(text.getValue());
-            if (replacementValue != null)
+            log.info("ADDTOROW {}", text.getValue()) ;
+            //Workaround !
+            String txtValue = text.getValue();
+            if (! txtValue.startsWith("{"))
+                txtValue = "{".concat(txtValue) ; 
+            if (! txtValue.endsWith("}"))
+                txtValue = txtValue.concat("}") ;
+            //END Workaround
+            String replacementValue = replacements.get(txtValue);
+            if (replacementValue != null) {
+                replacementValue = replacementValue.replace("{", "") ;
+                replacementValue = replacementValue.replace("}", "") ;
                 text.setValue(replacementValue);
+            }
         }
         reviewTable.getContent().add(workingRow);
     }
 
     private  Tbl getTemplateTable(List<Object> tables, String templateKey) {
+        
         
         for (Object tbl : tables) {
             List<?> textElements = getAllElementFromObject(tbl, Text.class);            
