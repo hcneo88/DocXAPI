@@ -210,7 +210,6 @@ public class DocXAPI {
 
     public DocXAPI() {
         recipientAddress = new RecipientAddress();
-        
     }
 
     public MainDocumentPart getTemplateMainDocumentPart() {
@@ -738,9 +737,61 @@ public class DocXAPI {
             run.getContent().add(drawing);
             para.getContent().add(run);
         }
-        
+
         return para;
     } 
+
+    
+    public  void createSignOffParagraph(String signText, byte[] signatureImage, List<String> signDesignation, JcEnumeration justification) throws Exception {
+
+        P para = objectFactory.createP();
+        PPr pPR = para.getPPr() ;
+        if (pPR == null)
+            pPR = objectFactory.createPPr();
+        pPR.setKeepNext(new BooleanDefaultTrue());
+    
+        //R run = objectFactory.createR();
+
+        Br nl = objectFactory.createBr();
+        if (signText != null) {
+            R stRun = createRun() ;
+            Text sText = createText(signText) ;
+            stRun.getContent().add(sText) ;
+            stRun.getContent().add(nl);
+            para.getContent().add(stRun) ;
+        }
+
+        R siRun = null; 
+        Drawing drawing = null;
+        if (signatureImage != null) { 
+            siRun = createRun();
+            drawing = createDrawing((byte[])signatureImage, templateMainDocumentPart, 0) ; 
+            siRun.getContent().add(drawing) ;
+            para.getContent().add(siRun) ;
+        }
+        
+        if (signDesignation != null) {
+
+            R[] runs = new R[signDesignation.size()] ;
+            Text[] texts =  new Text[signDesignation.size()] ;
+            int i = 0 ;
+            for (String sDesignation : signDesignation) {
+                runs[i] = createRun() ;
+                texts[i] = createText(sDesignation) ;
+
+                runs[i].getContent().add(nl);
+                runs[i].getContent().add(texts[i]) ;
+                
+                para.getContent().add(runs[i]) ;
+             }
+
+        }
+
+        templateMainDocumentPart.getContent().add(para) ;
+        
+
+    }
+    
 
     public  P createTextParagraph(Object obj, JcEnumeration justification) throws Exception {
 
@@ -769,6 +820,18 @@ public class DocXAPI {
         run.getContent().add(text) ;
         para.getContent().add(run);
         return para;
+    }
+
+    //This version does not keep the signatory parts together
+    public void createSimpleSignOffParagraph(String signText, byte[] signatureImage, 
+                                    List<String> signDesignation, JcEnumeration justification) throws Exception {
+
+        createSimpleParagraph(signText, templateMainDocumentPart,justification) ;
+        createSimpleParagraph(signatureImage, templateMainDocumentPart,justification) ;
+        for (String text : signDesignation) {
+            createSimpleParagraph(text, templateMainDocumentPart,justification) ;
+        }
+
     }
 
     public void createSimpleParagraph(Object obj, 
