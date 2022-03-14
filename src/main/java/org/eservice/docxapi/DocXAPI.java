@@ -69,11 +69,16 @@ import java.io.InputStream;
 import java.io.Writer;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
 import org.docx4j.org.apache.poi.util.IOUtils;
 import org.docx4j.relationships.Relationship;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 
@@ -88,7 +93,7 @@ import com.google.gson.reflect.TypeToken;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
+//@Slf4j
 public class DocXAPI { 
     
     class HeaderFooter {
@@ -196,13 +201,13 @@ public class DocXAPI {
         }
         
     }
-
-    private static Logger log = LoggerFactory.getLogger(DocXAPI.class);
     
-        
+    private static Logger log = LoggerFactory.getLogger(DocXAPI.class);
+
+    private static final Date compileTime = Calendar.getInstance().getTime(); ;  
     private WordprocessingMLPackage templatePackage ; 
     private MainDocumentPart templateMainDocumentPart ;   
-    private ObjectFactory objectFactory ;
+    private static ObjectFactory objectFactory ;
    
     MergeFields mergeField = new MergeFields();
     Map<String, HeaderFooter> headerFooters = new HashMap<>();       
@@ -210,6 +215,11 @@ public class DocXAPI {
 
     public DocXAPI() {
         recipientAddress = new RecipientAddress();
+    }
+
+    public static String apiVersionDate() {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
+        return dateFormat.format(compileTime) ;
     }
 
     public MainDocumentPart getTemplateMainDocumentPart() {
@@ -745,17 +755,14 @@ public class DocXAPI {
     public  void createSignOffParagraph(String signText, byte[] signatureImage, List<String> signDesignation, JcEnumeration justification) throws Exception {
 
         P para = objectFactory.createP();
-        PPr pPR = para.getPPr() ;
-        if (pPR == null)
-            pPR = objectFactory.createPPr();
-        pPR.setKeepNext(new BooleanDefaultTrue());
-    
+        
         //R run = objectFactory.createR();
 
         Br nl = objectFactory.createBr();
         if (signText != null) {
             R stRun = createRun() ;
             Text sText = createText(signText) ;
+
             stRun.getContent().add(sText) ;
             stRun.getContent().add(nl);
             para.getContent().add(stRun) ;
@@ -765,7 +772,7 @@ public class DocXAPI {
         Drawing drawing = null;
         if (signatureImage != null) { 
             siRun = createRun();
-            drawing = createDrawing((byte[])signatureImage, templateMainDocumentPart, 0) ; 
+            drawing = createDrawing(signatureImage, templateMainDocumentPart, 0) ; 
             siRun.getContent().add(drawing) ;
             para.getContent().add(siRun) ;
         }
@@ -781,14 +788,18 @@ public class DocXAPI {
 
                 runs[i].getContent().add(nl);
                 runs[i].getContent().add(texts[i]) ;
-                
                 para.getContent().add(runs[i]) ;
              }
 
         }
 
+        PPr pPR = para.getPPr() ;
+        if (pPR == null)
+            pPR = objectFactory.createPPr();
+        pPR.setKeepNext(new BooleanDefaultTrue());
+        para.setPPr(pPR) ;
+    
         templateMainDocumentPart.getContent().add(para) ;
-        
 
     }
     
@@ -826,15 +837,24 @@ public class DocXAPI {
     public void createSimpleSignOffParagraph(String signText, byte[] signatureImage, 
                                     List<String> signDesignation, JcEnumeration justification) throws Exception {
 
-        createSimpleParagraph(signText, templateMainDocumentPart,justification) ;
-        createSimpleParagraph(signatureImage, templateMainDocumentPart,justification) ;
+        List<P> pList = new ArrayList<>();
+        pList.add (createSimpleParagraph(signText, templateMainDocumentPart,justification)) ;
+        pList.add (createSimpleParagraph(signatureImage, templateMainDocumentPart,justification)) ;
         for (String text : signDesignation) {
-            createSimpleParagraph(text, templateMainDocumentPart,justification) ;
+            pList.add (createSimpleParagraph(text, templateMainDocumentPart,justification)) ;
+        }
+
+        for (P p : pList) {
+            if (p != null) {
+                PPr pPR = p.getPPr();
+                pPR.setKeepNext(new BooleanDefaultTrue());
+                p.setPPr(pPR) ;
+            }
         }
 
     }
 
-    public void createSimpleParagraph(Object obj, 
+    public P createSimpleParagraph(Object obj, 
                                       Part documentPart,  
                                       JcEnumeration justification) throws Exception {
 
@@ -856,7 +876,7 @@ public class DocXAPI {
             addNothing = false;
         } */ 
 
-        if (addNothing) return ;
+        if (addNothing) return null;
 
         if (documentPart.getClass().getSimpleName().equalsIgnoreCase("MainDocumentPart"))
             ((MainDocumentPart) documentPart).getContent().add(p) ;
@@ -866,6 +886,8 @@ public class DocXAPI {
             
         if (documentPart.getClass().getSimpleName().equalsIgnoreCase("FooterPart")) 
             ((FooterPart) documentPart).getContent().add(p) ;
+
+        return p;
     }
 
     
@@ -1508,14 +1530,14 @@ public class DocXAPI {
         return null;
     }
 
-    public TextField createTextField(String text) {
+    public static TextField createTextField(String text) {
         TextField txField =  new TextField() ;
         return txField.setText(text) ;
         //return txField ;
 
     }
 
-    public RPr getTextFieldProperties(RPr runPR, TextField textField) {
+    public static RPr getTextFieldProperties(RPr runPR, TextField textField) {
         
         RPr cloneRPr = objectFactory.createRPr() ; 
         if (runPR != null) {
@@ -1563,7 +1585,7 @@ public class DocXAPI {
 
     }
 
-    public ImageField createImageField(byte[] imageByte) {
+    public static ImageField createImageField(byte[] imageByte) {
         ImageField imageField = new ImageField();
         return imageField.setImage(imageByte) ;
     }
