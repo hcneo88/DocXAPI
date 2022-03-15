@@ -1734,6 +1734,7 @@ public class DocXAPI {
             }
         } 
 
+        log.debug("List of tables: {}", mergeField.tables) ;
         //Table Merge field                       
         if (mergeField.tables.size() > 0) { 
             log.debug("Merging tables.");
@@ -1741,7 +1742,7 @@ public class DocXAPI {
             for (Map.Entry<String, List<Map<String, String>>> tableList :mergeField.tables.entrySet()) {
                 
                 List <Map<String, String>> dataList = tableList.getValue();  
-                if (dataList.size() > 0) {
+                if (dataList != null && dataList.size() > 0) {
                     
                     Map<String, String>dataMap = dataList.get(0) ;
                     colNames = new String[dataMap.size()] ;
@@ -1758,6 +1759,7 @@ public class DocXAPI {
         }
          
         
+        log.debug("List of image variables: {}", mergeField.imageVariables) ;
         // Image Merge Field
         String fieldName;
         if (mergeField.imageVariables.size() > 0) {
@@ -1769,8 +1771,8 @@ public class DocXAPI {
         } 
 
         //Text Merge Fields
+        log.debug("List of textVariables: {}", mergeField.textVariables) ;
         if (mergeField.textVariables.size() > 0) {
-            log.debug("Merging text.");
             for (Map.Entry<String, TextField> textFields : mergeField.textVariables.entrySet()) {
                 fieldName = textFields.getKey() ;
                 if (textFields.getValue().isEncrypted() && textFields.getValue().getText().startsWith("!")) {
