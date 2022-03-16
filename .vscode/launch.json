@@ -9,6 +9,13 @@
             "name": "Launch RunTest",
             "request": "launch",
             "mainClass": "org.eservice.docxapi.RunTest",
+            "projectName": "docxapi"
+        },
+        {
+            "type": "java",
+            "name": "Launch RunTest",
+            "request": "launch",
+            "mainClass": "org.eservice.docxapi.RunTest",
             "projectName": "DocXAPI"
         },
         {

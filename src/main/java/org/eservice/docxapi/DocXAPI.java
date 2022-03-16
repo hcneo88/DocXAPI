@@ -235,7 +235,7 @@ public class DocXAPI {
         log.debug ("Loaded Template: {} {}", templateFileName,  " loaded.");
     } 
    
-    public byte[] loadImage(String imagePath) throws Exception{
+    public byte[]  loadImage(String imagePath) throws Exception{
         InputStream is = new FileInputStream(imagePath);
         byte[] bytes = IOUtils.toByteArray(is);
         return bytes;
@@ -1530,6 +1530,11 @@ public class DocXAPI {
         return null;
     }
 
+    public static QrCodeField createQrCodeField(String qrCodeString, int width, int height) throws Exception {
+        QrCodeField qrCodeField = new QrCodeField(qrCodeString, width, height) ;
+        return qrCodeField ;
+    }
+
     public static TextField createTextField(String text) {
         TextField txField =  new TextField() ;
         return txField.setText(text) ;
@@ -1903,7 +1908,7 @@ public class DocXAPI {
         }
     }
 
-    public byte[] createQRCode(String text, int width, int height) throws Exception {
+    public static byte[] createQRCode(String text, int width, int height) throws Exception {
         
         String charSet = "UTF-8" ;
         Map<EncodeHintType, Object>  hintMap = new EnumMap<>(EncodeHintType.class);

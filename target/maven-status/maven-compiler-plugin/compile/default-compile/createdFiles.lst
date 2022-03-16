@@ -8,5 +8,6 @@ org\eservice\docxapi\RunTest.class
 org\eservice\docxapi\DocXAPI$1.class
 org\eservice\docxapi\RecipientAddress.class
 org\eservice\docxapi\DocXAPI$NoticeSummary.class
+org\eservice\docxapi\QrCodeField.class
 org\eservice\docxapi\DocXAPI$2.class
 org\eservice\docxapi\DocXAPI$MergeFields.class
