@@ -1589,7 +1589,7 @@ public class DocXAPI {
         return cloneRPr ;
 
     }
-
+ 
     public static ImageField createImageField(byte[] imageByte) {
         ImageField imageField = new ImageField();
         return imageField.setImage(imageByte) ;
