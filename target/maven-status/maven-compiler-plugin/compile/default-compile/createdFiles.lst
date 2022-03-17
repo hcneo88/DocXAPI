@@ -3,6 +3,7 @@ org\eservice\docxapi\Crypto.class
 org\eservice\docxapi\Constant.class
 org\eservice\docxapi\TextField.class
 org\eservice\docxapi\ImageField.class
+org\eservice\docxapi\DocXAPI$Colors.class
 org\eservice\docxapi\DocXAPI.class
 org\eservice\docxapi\RunTest.class
 org\eservice\docxapi\DocXAPI$1.class

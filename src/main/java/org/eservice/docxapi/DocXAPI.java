@@ -55,6 +55,7 @@ import javax.xml.bind.JAXBException;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.client.j2se.MatrixToImageConfig;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
@@ -91,11 +92,31 @@ import com.google.gson.internal.LinkedTreeMap;
 import com.google.gson.reflect.TypeToken;
 
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
 //@Slf4j
 public class DocXAPI { 
     
+
+    public enum Colors {
+
+        BLUE(0xFF40BAD0),
+        RED(0xFFE91C43),
+        PURPLE(0xFF8A4F9E),
+        ORANGE(0xFFF4B13D),
+        WHITE(0xFFFFFFFF),
+        BLACK(0xFF000000);
+
+        private final int argb;
+
+        Colors(final int argb){
+            this.argb = argb;
+        }
+
+        public int getArgb(){
+            return argb;
+        }
+    }
+
     class HeaderFooter {
         //NOTE: If this class is changed, need to analyze the impact on the method
         //deserializeHeaderFooter.  
@@ -204,7 +225,7 @@ public class DocXAPI {
     
     private static Logger log = LoggerFactory.getLogger(DocXAPI.class);
 
-    private static final Date compileTime = Calendar.getInstance().getTime(); ;  
+    private static final Date compileTime = Calendar.getInstance().getTime(); 
     private WordprocessingMLPackage templatePackage ; 
     private MainDocumentPart templateMainDocumentPart ;   
     private static ObjectFactory objectFactory ;
@@ -213,9 +234,15 @@ public class DocXAPI {
     Map<String, HeaderFooter> headerFooters = new HashMap<>();       
     RecipientAddress recipientAddress  ;
 
+
     public DocXAPI() {
         recipientAddress = new RecipientAddress();
     }
+
+    public static MatrixToImageConfig qrConfigureColor(Colors fg, Colors bg) {
+        return new MatrixToImageConfig(bg.getArgb(), fg.getArgb());
+    }
+
 
     public static String apiVersionDate() {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
@@ -752,7 +779,7 @@ public class DocXAPI {
     } 
 
     
-    public  void createSignOffParagraph(String signText, byte[] signatureImage, List<String> signDesignation, JcEnumeration justification) throws Exception {
+    public  void createSignOffParagraph(String signText, byte[] signatureImage, List<String> signDesignation) throws Exception {
 
         P para = objectFactory.createP();
         
@@ -1908,7 +1935,8 @@ public class DocXAPI {
         }
     }
 
-    public static byte[] createQRCode(String text, int width, int height) throws Exception {
+    //call qrConfigureColor api to setup the background and foreground colors
+    public static byte[] createQRCodeImage(String text, int width, int height, MatrixToImageConfig matrixConfig) throws Exception {
         
         String charSet = "UTF-8" ;
         Map<EncodeHintType, Object>  hintMap = new EnumMap<>(EncodeHintType.class);
@@ -1920,15 +1948,15 @@ public class DocXAPI {
                                            BarcodeFormat.QR_CODE, width, height, hintMap);
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream(); 
-        MatrixToImageWriter.writeToStream(matrix, "png", bos);
-    
+                                           
+        if (matrixConfig != null)
+            MatrixToImageWriter.writeToStream(matrix, "png", bos, matrixConfig);
+        else
+            MatrixToImageWriter.writeToStream(matrix, "png", bos);
+
         return bos.toByteArray() ; 
             
     }
 
-    public static void main(String[] args) throws Exception {
-        
-    }
-
-}
+   }
 
