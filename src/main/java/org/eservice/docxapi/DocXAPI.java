@@ -97,7 +97,7 @@ import lombok.Data;
 public class DocXAPI { 
     
 
-    public enum Colors {
+    public enum Colors {    //Colors for QR code creation.
 
         BLUE(0xFF40BAD0),
         RED(0xFFE91C43),
@@ -262,7 +262,7 @@ public class DocXAPI {
         log.debug ("Loaded Template: {} {}", templateFileName,  " loaded.");
     } 
    
-    public byte[]  loadImage(String imagePath) throws Exception{
+    public  byte[]  loadImage(String imagePath) throws Exception{
         InputStream is = new FileInputStream(imagePath);
         byte[] bytes = IOUtils.toByteArray(is);
         return bytes;
@@ -1619,8 +1619,20 @@ public class DocXAPI {
  
     public static ImageField createImageField(byte[] imageByte) {
         ImageField imageField = new ImageField();
-        return imageField.setImage(imageByte) ;
+        imageField.setImage(imageByte) ;
+        return imageField;
     }
+
+    public static ImageField createImageField(String imagePath) throws Exception {
+        
+        InputStream is = new FileInputStream(imagePath);
+        byte[] imageByte = IOUtils.toByteArray(is);
+        ImageField imageField = new ImageField();
+        imageField.setImage(imageByte) ;
+        return imageField ; 
+
+    }
+    
 
     public List<Object> createParagraphList(Object leftJustified, Object rightJustified) {
 
